@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>猜數字</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="js/anime.min.js"></script>
+    <script>
+        var max = 100;
+        var min = 0;
+        var choosed_numbers = []
+        var target_number = getRandomNumber(max)
+        var users = []
+        var current_user_index = 0;
+
+        $(function() {
+            $('textarea').change(function() {
+                let str = $('textarea').val().trim("").trim(",")
+                let names = str.split(",")
+                if (str != "" && names.length) {
+                    shuffle(names)
+                    var i = 0;
+                    for (p of names) {
+                        if (p) {
+                            users.push({
+                                "img": 'images/' + i + '.svg',
+                                "name": p,
+                                "index": (parseInt(i) + 1)
+                            })
+                            i += 1
+                        }
+                    }
+                    createUserCards()
+                } else {
+                    showMessage("發生錯誤，請重新輸入參加人員。")
+                }
+            })
+        })
+
+        function shuffle(a) {
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+        }
+
+        function createUserCards() {
+            $('.users-container').html("");
+
+            for (i in users) {
+                let data = users[i]
+                var html = '<div class="column is-3"><div class="box">' +
+                    '<article class="media is-success">' +
+                    '    <div class="media-left">' +
+                    '        <figure class="image is-64x64">' +
+                    '            <img src="' + data['img'] + '" alt="Image" style="width: 64px; height: 64px;">' +
+                    '        </figure>' +
+                    '    </div>' +
+                    '    <div class="media-content">' +
+                    '        <div class="content">' +
+                    '            <p>' +
+                    '                <strong>編號#' + data['index'] + '</strong>' +
+                    '            </p>' +
+                    '            <p>' + data['name'] + '</p>' +
+                    '        </div>' +
+                    '    </div>' +
+                    '</article>' +
+                    '</div></div>';
+                $('.users-container').append(html).hide().fadeIn(500)
+            }
+
+            $('textarea').prop('disabled', true)
+        }
+
+        function chose_number() {
+            let num = $('#num').val() | 0;
+
+            if (num <= min || num >= max) {
+                showMessage("輸入有誤，請重新選擇數字。");
+            } else if (num === target_number) {
+                choosed_numbers.push(num)
+                finished(num) // 中獎
+            } else {
+                choosed_numbers.push(num)
+                refreshUI()
+                insertCard(num)
+                current_user_index = (current_user_index >= (users.length - 1)) ? 0 : parseInt(current_user_index + 1)
+            }
+        }
+
+        function finished(num) {
+            let p = users[current_user_index]
+            $('.modal').addClass('is-active');
+            $('#final_num').html(num)
+            $('#final_image').attr('src', p['img'])
+            $('#final_name').html(p['name'])
+            $('time').html(new Date())
+
+            runWinAnimation()
+        }
+
+        function insertCard(num) {
+            let p = users[current_user_index]
+            var html = '<div class="box">' +
+                '<article class="media">' +
+                '    <div class="media-left">' +
+                '        <figure class="image is-64x64">' +
+                '            <img src="' + p['img'] + '" alt="Image" style="width: 64px; height: 64px;">' +
+                '        </figure>' +
+                '    </div>' +
+                '    <div class="media-content">' +
+                '        <div class="content">' +
+                '            <p>' +
+                '                <strong>' + p['name'] + '</strong> <small> @編號' + p['index'] + '</small>' +
+                '                <p>我猜了數字 ' + num + ' 可惜沒猜到...</p>' +
+                '            </p>' +
+                '        </div>' +
+                '    </div>' +
+                '</article>' +
+                '</div>';
+            if ($('#card_content').children().length >= 4) {
+                $('#card_content').children().last().remove()
+            }
+            $(html).hide().prependTo('#card_content').fadeIn(700);
+        }
+
+        function refreshUI() {
+            $('#num').val("")
+            var animation_id = ""
+
+            for (val of choosed_numbers) {
+                console.log(val)
+                if (val > target_number && val < max) {
+                    max = val
+                    animation_id = "#num_upper"
+                } else if (val < target_number && val > min) {
+                    min = val
+                    animation_id = "#num_lower"
+                }
+            }
+
+            anime({
+                targets: [animation_id],
+                scale: 1.1,
+                loop: 2,
+                direction: 'alternate',
+                easing: 'easeInOutSine',
+                duration: 300
+            });
+
+            $('#num_upper').html(max);
+            $('#num_lower').html(min);
+        }
+
+        function showMessage(msg = '') {
+            $('#message > .message-body > strong').html(msg);
+            $('#message').show(200).delay(2000).fadeOut();
+        }
+
+        function getRandomNumber(max) {
+            return Math.floor(Math.random() * max)
+        }
+
+        function runWinAnimation() {
+            window.human = false;
+
+            var canvasEl = document.querySelector('.fireworks');
+            var ctx = canvasEl.getContext('2d');
+            var numberOfParticules = 30;
+            var pointerX = 0;
+            var pointerY = 0;
+            var tap = ('ontouchstart' in window || navigator.msMaxTouchPoints) ? 'touchstart' : 'mousedown';
+            var colors = ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C'];
+
+            function setCanvasSize() {
+                canvasEl.width = window.innerWidth * 2;
+                canvasEl.height = window.innerHeight * 2;
+                canvasEl.style.width = window.innerWidth + 'px';
+                canvasEl.style.height = window.innerHeight + 'px';
+                canvasEl.getContext('2d').scale(2, 2);
+            }
+
+            function updateCoords(e) {
+                pointerX = e.clientX || e.touches[0].clientX;
+                pointerY = e.clientY || e.touches[0].clientY;
+            }
+
+            function setParticuleDirection(p) {
+                var angle = anime.random(0, 360) * Math.PI / 180;
+                var value = anime.random(50, 180);
+                var radius = [-1, 1][anime.random(0, 1)] * value;
+                return {
+                    x: p.x + radius * Math.cos(angle),
+                    y: p.y + radius * Math.sin(angle)
+                }
+            }
+
+            function createParticule(x, y) {
+                var p = {};
+                p.x = x;
+                p.y = y;
+                p.color = colors[anime.random(0, colors.length - 1)];
+                p.radius = anime.random(16, 32);
+                p.endPos = setParticuleDirection(p);
+                p.draw = function() {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                }
+                return p;
+            }
+
+            function createCircle(x, y) {
+                var p = {};
+                p.x = x;
+                p.y = y;
+                p.color = '#FFF';
+                p.radius = 0.1;
+                p.alpha = .5;
+                p.lineWidth = 6;
+                p.draw = function() {
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
+                    ctx.lineWidth = p.lineWidth;
+                    ctx.strokeStyle = p.color;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+                return p;
+            }
+
+            function renderParticule(anim) {
+                for (var i = 0; i < anim.animatables.length; i++) {
+                    anim.animatables[i].target.draw();
+                }
+            }
+
+            function animateParticules(x, y) {
+                var circle = createCircle(x, y);
+                var particules = [];
+                for (var i = 0; i < numberOfParticules; i++) {
+                    particules.push(createParticule(x, y));
+                }
+                anime.timeline().add({
+                        targets: particules,
+                        x: function(p) {
+                            return p.endPos.x;
+                        },
+                        y: function(p) {
+                            return p.endPos.y;
+                        },
+                        radius: 0.1,
+                        duration: anime.random(1200, 1800),
+                        easing: 'easeOutExpo',
+                        update: renderParticule
+                    })
+                    .add({
+                        targets: circle,
+                        radius: anime.random(80, 160),
+                        lineWidth: 0,
+                        alpha: {
+                            value: 0,
+                            easing: 'linear',
+                            duration: anime.random(600, 800),
+                        },
+                        duration: anime.random(1200, 1800),
+                        easing: 'easeOutExpo',
+                        update: renderParticule,
+                        offset: 0
+                    });
+            }
+
+            var render = anime({
+                duration: Infinity,
+                update: function() {
+                    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+                }
+            });
+
+            // document.addEventListener(tap, function(e) {
+            //     window.human = true;
+            //     render.play();
+            //     updateCoords(e);
+            //     animateParticules(pointerX, pointerY);
+            // }, false);
+
+            var centerX = window.innerWidth / 2;
+            var centerY = window.innerHeight / 2;
+
+            var count = 0;
+
+            function autoClick() {
+                if (count > 5) {
+                    return
+                }
+
+                if (window.human) return;
+                animateParticules(
+                    anime.random(centerX - 350, centerX + 350),
+                    anime.random(centerY - 350, centerY + 350)
+                );
+                anime({
+                    duration: 1000,
+                }).finished.then(autoClick);
+                count += 1
+            }
+
+            autoClick();
+            setCanvasSize();
+            window.addEventListener('resize', setCanvasSize, false);
+        }
+    </script>
+    <style>
+        .fullscreen {
+            position: fixed;
+            padding: 0;
+            margin: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar is-info" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="#">
+                <h1 class="title">猜數字</h1>
+            </a>
+        </div>
+    </nav>
+    <section class="section">
+        <div class="container">
+            <div class="tile is-ancestor">
+                <div class="tile is-4 is-vertical is-parent">
+                    <div class="tile is-child box">
+                        <p class="title">小於</p>
+                        <p style="font-size: 7rem;" id="num_upper">100</p>
+                    </div>
+                    <div class="tile is-child box">
+                        <p class="title">大於</p>
+                        <p style="font-size: 7rem;" id="num_lower">0</p>
+                    </div>
+                </div>
+                <div class="tile is-parent">
+                    <div class="tile is-child box">
+                        <p class="title">參加人員(,隔開)</p>
+                        <div class="field">
+                            <div class="control">
+                                <textarea class="textarea" placeholder="Person1,Person2,Person3,Person4..."></textarea>
+                            </div>
+                        </div>
+                        <hr>
+                        <p class="title">猜數字</p>
+                        <div class="field">
+                            <p class="control has-icons-left">
+                                <input id="num" class="input" type="text" placeholder="猜一個數字" type="number">
+                                <span class="icon is-small is-left">
+                                <i class="fas fa-lock"></i>
+                              </span>
+                            </p>
+                        </div>
+                        <div class="buttons">
+                            <button class="button is-primary" onclick="chose_number()">送出</button>
+                            <button class="button is-link" onclick="document.getElementById('num').value = ''">清除</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="tile is-parent">
+                    <div class="tile is-child" id="card_content">
+                        <div class="box">
+                            <article class="media">
+                                <div class="media-left">
+                                    <figure class="image is-64x64">
+                                        <img src="images/1.svg" alt="Image" style="width: 64px; height: 64px;">
+                                    </figure>
+                                </div>
+                                <div class="media-content">
+                                    <div class="content">
+                                        <p>
+                                            <strong>功能解說員</strong> <small>@animal_1</small>
+                                            <p>請在1~99猜一個數字，猜中了才可以帶走禮物。</p>
+                                        </p>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <article id="message" class="message is-danger" style="display: none;">
+                <div class="message-body">
+                    <strong>請重新選擇</strong>
+                </div>
+            </article>
+
+
+            <div class="columns is-multiline users-container">
+
+            </div>
+
+            <div class="modal">
+                <div class="modal-background"></div>
+                <div class="modal-card">
+                    <header class="modal-card-head">
+                        <p class="modal-card-title">Finished</p>
+                    </header>
+                    <section class="modal-card-body has-text-centered">
+                        <div class="card">
+                            <div class="card-image is-flex" style="justify-content: center;">
+                                <figure class="image">
+                                    <img src="images/1.svg" alt="Placeholder image" id="final_image" style="width: 320px; height: 320px;">
+                                </figure>
+                            </div>
+                            <div class="card-content">
+                                <div class="content is-centered">
+                                    <span class="title is-4">恭喜<span id="final_name"></span>中獎</span><br>
+                                    <span style="font-size: 5rem;" id="final_num">0</span><br>
+                                    <time>11:09 PM - 1 Jan 2016</time>
+                                </div>
+                            </div>
+                            <canvas class="fireworks fullscreen" style="z-index: 100;"></canvas>
+                        </div>
+                    </section>
+                    <footer class="modal-card-foot">
+                        <button class="button is-success" onclick="location.reload();">重新開始</button>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>
